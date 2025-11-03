@@ -1,0 +1,60 @@
+# Default configuration for the HTCondor executor profile. Each of these values
+# can also be passed via command line flags, e.g. `--jobs 30 --executor htcondor`.
+# However, putting them here allows you to avoid needing to specify them every time.
+
+# 'jobs' specifies the maximum number of HTCondor jobs that can be in the queue at once.
+# These come from individual Snakemake workflow "steps", which are a "rule" applied to a
+# specific set of input files.
+jobs: 6
+
+# Tell Snakemake to use the HTCondor executor plugin (the executor must be installed ahead
+# of time).
+executor: htcondor
+
+# Indicate to the plugin that jobs running on various EPs do not share a filesystem with
+# each other, or with the AP.
+shared-fs-usage: none
+
+# Distributed, heterogeneous computational environments are a wild place where strange things
+# can happen. If something goes wrong, try again up to N times. After that, we assume there's
+# a real error that requires user/admin intervention.
+#
+# Please be responsible setting this number!!! Excessive retries are bad for the system and
+# your own throughput because they count against your fairshare quotas on the system. You don't
+# want to keep blindly retrying a workflow that always fails.
+retries: 3
+
+# Default resources will apply to all workflow steps. If a single workflow step fails due
+# to insufficient resources, it can be re-run with modified values. Snakemake will handle
+# picking up where it left off, and won't re-run steps that have already completed.
+default-resources:
+  # This is the HTCondor job wrapper script that gets used to launch each job on the EP.
+  # It's a bit too technical to discuss in this example workflow, but at a high level it
+  # starts up a Snakemake instance on each EP.
+  job_wrapper: "wrapper.sh"
+  preserve_relative_paths: true
+
+  # Specify your EP container image and the corresponding HTCondor universe to use.
+  #
+  # Note requirement for quotes around the image name
+  # Put your own image here if you'd like to use a different one.
+  container_image: "'docker://jhiemstra/snakemake-dev-image:v1'"
+  universe: "container"
+
+  # The value for request_disk should be large enough to accommodate the runtime container
+  # image and your input data.
+  #
+  # Using values that are needlessly larger than necessary for your jobs can lead to longer
+  # queue wait times and lower throughput. Reference the `.log` files produced by HTCondor
+  # to see exactly what resources were used by your jobs for fine-tuning.
+  request_disk: "4GB"
+  request_memory: "1GB"
+  # Tell HTCondor how many CPUs your job needs (this correlate's to HTCondor's `request_cpus` parameter).
+  threads: 1
+
+  # You can request additional types of resources as needed, e.g.
+  # request_gqus: 1
+  # gpus_minimum_memory: 40GB
+  #
+  # The resource types currently supported by the HTCondor Snakemake executor plugin are discussed
+  # here: https://github.com/htcondor/snakemake-executor-plugin-htcondor/blob/main/docs/further.md
